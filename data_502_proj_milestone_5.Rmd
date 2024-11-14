@@ -10,7 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(colorspace)
 library(readr)
-ds=read_csv("/Users/jysmochi/school/data_502/data_502_proj_datasets/train.csv")
+ds=read_csv("https://raw.githubusercontent.com/jysmochi/data_502_project_stuff/refs/heads/main/train.csv?token=GHSAT0AAAAAAC2PWFVNORIY5I463VHD3HAGZZWISCA")
 ```
 
 
@@ -154,6 +154,81 @@ ggplot(ds_28, aes(x = Age)) +
         plot.subtitle = element_text(size = 12, face = "italic"),
         plot.caption = element_text(size = 10, hjust = 0, face="italic")
         )
+```
+
+In the two graphs below, we can see that the highest performing sales channel policies by average annual premium are by and large not commonly used in Region 28. Perhaps by shifting our sales channel policies we can maximize our profits.
+
+
+```{r}
+ds_28_premiums = ds_28 %>%
+  group_by(Policy_Sales_Channel) %>%
+  summarize(mean_premium = mean(Annual_Premium),
+            med_premium = median(Annual_Premium),
+            mean_age = mean(Age),
+            sd_premium = sd(Annual_Premium),
+            n = n()) %>% 
+  filter(n > 10) %>% 
+  arrange(desc(mean_premium))
+
+ds_28_top_prem = ds_28_premiums[c(1:10),]
+
+ggplot(ds_28_top_prem, aes(x = reorder(Policy_Sales_Channel, mean_premium), y = mean_premium, ymin = mean_premium- 1.96 * sd_premium / sqrt(n), ymax = mean_premium + 1.96 * sd_premium / sqrt(n))) + 
+  geom_point(size = 2) + 
+#  scale_fill_continuous_sequential(palette = "ag_GrnYl") + 
+  theme_minimal() + 
+  geom_errorbar(width = 0.5) + 
+  labs(
+    title = "Most Effective Sales Channels for Region 28",
+    subtitle = "Top ten policy sales channels by mean annual premium in region 28",
+    x = "Policy Sales Channel",
+    y = "Mean Annual Premium",
+    caption = "Source: Health Insurance Cross Sell Prediction-Kaggle"
+  ) + 
+  theme(axis.text.x = element_text(vjust = 0.5, hjust = 1),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_blank(),
+        panel.grid.major.y = element_blank(),
+        plot.title = element_text(size = 16, face = "bold"),
+        plot.subtitle = element_text(size = 12, face = "italic"),
+        plot.caption = element_text(size = 10, hjust = 0, face="italic"),
+        legend.position = "none"
+  ) + 
+  coord_flip()
+```
+
+```{r}
+ds_28_channel_count = ds_28 %>%
+  group_by(Policy_Sales_Channel) %>%
+  summarize(n = n()) %>% 
+  filter(n > 10) %>% 
+  arrange(desc(n))
+
+ds_28_top_n = ds_28_channel_count[c(1:10),]
+
+ggplot(ds_28_top_n, aes(x = reorder(Policy_Sales_Channel, n), y = n, fill = n)) + 
+  geom_col() + 
+  scale_fill_continuous_sequential(palette = "Emrld") + 
+  theme_minimal() + 
+  geom_text(aes(label = n), 
+            hjust = -0.1, color = "black", size = 3.5) + 
+  labs(
+    title = "Most Used Sales Channels for Region 28",
+    subtitle = "Top ten most commonly utilized policy sales channels in region 28",
+    x = "Policy Sales Channel",
+    y = "",
+    caption = "Source: Health Insurance Cross Sell Prediction-Kaggle"
+  ) + 
+  theme(axis.text.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_blank(),
+        panel.grid.major.y = element_blank(),
+        panel.grid.major.x = element_blank(),
+        plot.title = element_text(size = 16, face = "bold"),
+        plot.subtitle = element_text(size = 12, face = "italic"),
+        plot.caption = element_text(size = 10, hjust = 0, face="italic"),
+        legend.position = "none"
+  ) + 
+  coord_flip()
 ```
 
 
