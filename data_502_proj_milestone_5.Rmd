@@ -1,0 +1,159 @@
+---
+title: "Project Milestone 5"
+author: "Chloe Bui & Jeffrey Smith"
+date: "2024-11-14"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(colorspace)
+library(readr)
+ds=read_csv("/Users/jysmochi/school/data_502/data_502_proj_datasets/train.csv")
+```
+
+
+#1 Wrangle the data
+```{r}
+dsDummy = ds %>% 
+  mutate(Gender=factor(Gender),
+         Driving_License=factor(Driving_License),
+         Region_Code = factor(Region_Code),
+         Previously_Insured = factor(Previously_Insured),
+         Vehicle_Age = factor(Vehicle_Age),
+         Vehicle_Damage = factor(Vehicle_Damage),
+         Policy_Sales_Channel = factor(Policy_Sales_Channel))
+
+ds = ds %>% 
+  mutate(Gender=factor(Gender),
+         Driving_License=factor(Driving_License),
+         Region_Code = factor(Region_Code),
+         Previously_Insured = factor(Previously_Insured),
+         Vehicle_Age = factor(Vehicle_Age),
+         Vehicle_Damage = factor(Vehicle_Damage),
+         Policy_Sales_Channel = factor(Policy_Sales_Channel),
+         Response = factor(Response))
+
+# Summarize the data to calculate the proportion of customers interested in insurance per region
+region_summary <- ds %>%
+  group_by(Region_Code) %>%
+  summarise(
+    Total_Customers = n(),
+    Interested_Customers = sum(as.numeric(Response == 1)),
+    Interest_Rate = round (Interested_Customers / Total_Customers * 100,1),
+    total_annual_Premium = round (sum(Annual_Premium)/1000000,2))
+
+# Order the data by Interest_Rate in descending order
+region_summary_desc <- region_summary %>%
+  arrange(desc(Interest_Rate))
+# choose top 10
+region_summary_desc_10 = region_summary_desc %>% 
+  head(10)
+```
+
+
+### Slide 1
+Based on these two graphs below, region 28 should be an area of focus for our company. With the second highest interest rate and the largest premium contributions, focusing our efforst on region 28 will increase earnings of our company.
+
+
+```{r}
+ggplot(region_summary_desc_10, aes(x = reorder(as.factor(Region_Code), Interest_Rate), y = Interest_Rate, fill = Interest_Rate)) +
+  geom_bar(stat = "identity", color = "gray") +
+  
+  # Add text labels for Interest_Rate percentages
+  geom_text(aes(label = paste0(round(Interest_Rate, 1), "%")), 
+            hjust = -0.2, color = "black", size = 3.5) +
+  
+  # Apply continuous color scale from "Blue3"
+  scale_fill_continuous_sequential(palette = "Mint") +
+  
+  # Remove y-axis ticks, labels, and grid lines
+  scale_y_continuous(limits = c(0, 20), breaks = NULL) +
+  
+  # Flip coordinates for horizontal bars
+  coord_flip() +
+  
+  # Labels for title and axes
+  labs(
+    title = "Key areas to maximize Conversion opportunities",
+    subtitle = "Identifying top 10 regions with the highest interest rate",
+    x = "Region Code",
+    y = "",
+    caption = "Source: Health Insurance Cross Sell Prediction- Kaggle") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_blank(),  
+    axis.ticks.x = element_blank(),  
+    panel.grid.major.x = element_blank(),  
+    panel.grid.minor.x = element_blank(),  
+    panel.grid.major.y = element_blank(),  
+    panel.grid.minor.y = element_blank(),
+    legend.title = element_blank(),
+    plot.title = element_text(size = 16, face = "bold"),
+    plot.subtitle = element_text(size = 13, face = "italic"),
+    plot.caption = element_text(size = 10, hjust = 0, face="italic"),
+    legend.position = "none",
+  )
+```
+
+```{r}
+# Order the data by Annual_premium in descending order
+region_summary_desc_money <- region_summary %>%
+  arrange(desc(total_annual_Premium))
+# choose top 10
+region_summary_desc_money_10 = region_summary_desc_money %>% 
+  head(10)
+```
+
+```{r}
+ggplot(region_summary_desc_money_10, aes(x = reorder(as.factor(Region_Code), total_annual_Premium), 
+                                         y = total_annual_Premium, 
+                                         fill = total_annual_Premium)) +
+  geom_bar(stat = "identity", color = "gray") +
+  scale_fill_continuous_sequential(palette = "Peach") +
+  coord_flip()+
+  labs(
+    title = "High-Value Markets for Vehicle Insurance",
+    subtitle = "Identifying top 10 regions with the largest premium contributions to prioritize marketing and sales efforts",
+    x = "Region Code",
+    y = "Total Annual Premium (Unit: 1 million dollars)",
+    caption = "Source: Health Insurance Cross Sell Prediction-Kaggle") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(vjust = 0.5, hjust = 1),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank(),
+        plot.title = element_text(size = 16, face = "bold"),
+        plot.subtitle = element_text(size = 12, face = "italic"),
+        plot.caption = element_text(size = 10, hjust = 0, face="italic"),
+        legend.position = "none")
+```
+
+```{r}
+# Filter interested customer in region 28 
+ds_28 = ds %>% 
+  filter(Region_Code =="28", Response == "1")
+```
+
+```{r}
+ggplot(ds_28, aes(x = Age)) +
+  geom_density(fill = "lightblue", color = "darkblue", alpha = 0.7) +
+  labs(
+    title = "Age Distribution in Region 28: Key demographic Insights",
+    subtitle = "Analyzing the age profile of interested customers to inform targeted marketing strategies",
+    x = "Age",
+    y = "Density",
+    caption = "Source: Health Insurance Cross Sell Prediction-Kaggle"
+  ) +
+  theme_minimal()+
+  theme(axis.text.x = element_text(vjust = 0.5, hjust = 1),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_blank(),
+        plot.title = element_text(size = 16, face = "bold"),
+        plot.subtitle = element_text(size = 12, face = "italic"),
+        plot.caption = element_text(size = 10, hjust = 0, face="italic")
+        )
+```
+
+
