@@ -10,6 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(colorspace)
 library(readr)
+library(ggtext)
 ds=read_csv("https://raw.githubusercontent.com/jysmochi/data_502_project_stuff/refs/heads/main/train.csv?token=GHSAT0AAAAAAC2PWBQG42JEY7OXPT3B6DW2ZZWPSLA")
 ```
 
@@ -174,16 +175,19 @@ ds_28_top_prem = ds_28_premiums[c(1:10),]
 
 ggplot(ds_28_top_prem, aes(x = reorder(Policy_Sales_Channel, mean_premium), y = mean_premium, ymin = mean_premium- 1.96 * sd_premium / sqrt(n), ymax = mean_premium + 1.96 * sd_premium / sqrt(n))) + 
   geom_point(size = 2) + 
-#  scale_fill_continuous_sequential(palette = "ag_GrnYl") + 
   theme_minimal() + 
   geom_errorbar(width = 0.5) + 
   labs(
     title = "Which Sales Channels are Most Effective?",
-    subtitle = "Top ten policy sales channels by mean annual premium in region 28",
+    subtitle = "Top ten policy sales channels by mean annual premium in Region 28",
     x = "Policy Sales Channel",
     y = "Mean Annual Premium",
     caption = "Source: Health Insurance Cross Sell Prediction-Kaggle"
   ) + 
+  scale_x_discrete(
+    labels = c("55", "4", "121", "24", "<span style = 'color:red;'>25</span>", "42", "56", "36", "3", "59")
+  ) +
+  coord_flip() + 
   theme(axis.text.x = element_text(vjust = 0.5, hjust = 1),
         panel.grid.minor.x = element_blank(),
         panel.grid.minor.y = element_blank(),
@@ -191,9 +195,10 @@ ggplot(ds_28_top_prem, aes(x = reorder(Policy_Sales_Channel, mean_premium), y = 
         plot.title = element_text(size = 16, face = "bold"),
         plot.subtitle = element_text(size = 12, face = "italic"),
         plot.caption = element_text(size = 10, hjust = 0, face="italic"),
-        legend.position = "none"
-  ) + 
-  coord_flip()
+        legend.position = "none",
+        axis.text.y = element_markdown()
+  ) 
+  
 ```
 
 ```{r}
@@ -213,11 +218,15 @@ ggplot(ds_28_top_n, aes(x = reorder(Policy_Sales_Channel, n), y = n, fill = n)) 
             hjust = -0.1, color = "black", size = 3.5) + 
   labs(
     title = "Which Sales Channels are we Utilizing?",
-    subtitle = "Top ten most commonly utilized policy sales channels in region 28",
+    subtitle = "Top ten most commonly used policy sales channels in Region 28 by number of times used",
     x = "Policy Sales Channel",
     y = "",
     caption = "Source: Health Insurance Cross Sell Prediction-Kaggle"
   ) + 
+  scale_x_discrete(
+    labels = c("163", "<span style = 'color:red;'>25</span>", "13", "154", "156", "157", "152", "122", "124", "26")
+  ) +
+  coord_flip() + 
   theme(axis.text.x = element_blank(),
         panel.grid.minor.x = element_blank(),
         panel.grid.minor.y = element_blank(),
@@ -226,36 +235,9 @@ ggplot(ds_28_top_n, aes(x = reorder(Policy_Sales_Channel, n), y = n, fill = n)) 
         plot.title = element_text(size = 16, face = "bold"),
         plot.subtitle = element_text(size = 12, face = "italic"),
         plot.caption = element_text(size = 10, hjust = 0, face="italic"),
-        legend.position = "none"
-  ) + 
-  coord_flip()
-```
-
-
-
-```{r}
-vehicle_ages = c("< 1 Year", "1-2 Year", "> 2 Years")
-
-vehicle_prop = dsDummy %>% 
-  filter(Region_Code == "28") %>%
-  group_by(Vehicle_Age) %>% 
-  summarize(n = n(), 
-            interest_count = sum(Response),
-            interest_prop = interest_count/n)
-vehicle_prop_long = vehicle_prop %>% 
-  pivot_longer(cols = c(interest_prop, n), names_to = "Stat", values_to = "num")
-
-ggplot(vehicle_prop_long, aes(x = factor(Vehicle_Age, vehicle_ages), num, fill = Vehicle_Age)) + 
-  geom_col() + 
-  facet_wrap(.~Stat, scales = "free_y", labeller = as_labeller(c(interest_prop = "Interest Rate",
-                                                                 n = "Vehicle Count by Age"))) + 
-  scale_fill_manual(values = c("grey70", "grey30", "grey70"), guide = "none") + 
-  labs(x = "Vehicle Age", y = "", title = "Owners with Vehicles Over 2 Years Old Most Interested in Insurance", subtitle = "Vehicle age as it relates to interest rate and number of vehicles in region 28", caption = "Source: Health Insurance Cross Sell Prediction - Kaggle") +
-  theme_minimal() + 
-  theme(panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank(),
-        plot.title = element_text(size = 16, face = "bold"),
-        plot.subtitle = element_text(size = 13, face = "italic"),
-        plot.caption = element_text(size = 10, hjust = 0, face="italic"))
+        legend.position = "none",
+        axis.text.y = element_markdown()
+  )
 ```
 
 
@@ -276,17 +258,19 @@ anprem = dsDummy %>%
 anprem_long = anprem %>% 
   pivot_longer(cols = c(int_prop, CI_lower, CI_upper), names_to = "dat", values_to = "prop")
 
+shaders = data.frame(xmin = 41, xmax = 54, ymin = -Inf, ymax = Inf)
+
 ggplot(anprem, aes(Annual_Premium, int_prop, color = emph)) + 
+  geom_rect(data = shaders, aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax), fill = "grey", alpha = 0.5, inherit.aes = FALSE) +
   geom_point() + 
-  stat_smooth(method = "loess", se = FALSE, color = "black") + 
-  scale_color_manual(values = c("grey30", "red"), guide = "none") + 
-  labs(x = "Annual Premium ($1000)", y = "Interest Proportion", 
-       title = "Vehicle Insurance Interest Increases Until Annual Premium Hits $50k",
-       subtitle = "Insurance interest rates by annual premium in thousands of USD in region 28",
+  stat_smooth(method = "loess", se = FALSE, color = "red") + 
+  scale_color_manual(values = c("grey20", "red"), guide = "none") + 
+  labs(x = "Annual Premium (1000 Rupees)", y = "Interest Proportion", 
+       title = "Optimizing General Annual Premium",
+       subtitle = "Insurance interest proportion by annual premium in thousands of Rupees in Region 28",
        caption = "Source: Health Insurance Cross Sell Prediction - Kaggle") + 
   theme_classic() + 
   theme(plot.title = element_text(size = 16, face = "bold"),
         plot.subtitle = element_text(size = 13, face = "italic"),
         plot.caption = element_text(size = 10, hjust = 0, face="italic"))
 ```
-
