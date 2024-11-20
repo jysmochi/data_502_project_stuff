@@ -10,7 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(colorspace)
 library(readr)
-ds=read_csv("https://raw.githubusercontent.com/jysmochi/data_502_project_stuff/refs/heads/main/train.csv?token=GHSAT0AAAAAAC2PWFVNORIY5I463VHD3HAGZZWISCA")
+ds=read_csv("https://raw.githubusercontent.com/jysmochi/data_502_project_stuff/refs/heads/main/train.csv?token=GHSAT0AAAAAAC2PWBQG42JEY7OXPT3B6DW2ZZWPSLA")
 ```
 
 
@@ -178,7 +178,7 @@ ggplot(ds_28_top_prem, aes(x = reorder(Policy_Sales_Channel, mean_premium), y = 
   theme_minimal() + 
   geom_errorbar(width = 0.5) + 
   labs(
-    title = "Most Effective Sales Channels for Region 28",
+    title = "Which Sales Channels are Most Effective?",
     subtitle = "Top ten policy sales channels by mean annual premium in region 28",
     x = "Policy Sales Channel",
     y = "Mean Annual Premium",
@@ -212,7 +212,7 @@ ggplot(ds_28_top_n, aes(x = reorder(Policy_Sales_Channel, n), y = n, fill = n)) 
   geom_text(aes(label = n), 
             hjust = -0.1, color = "black", size = 3.5) + 
   labs(
-    title = "Most Used Sales Channels for Region 28",
+    title = "Which Sales Channels are we Utilizing?",
     subtitle = "Top ten most commonly utilized policy sales channels in region 28",
     x = "Policy Sales Channel",
     y = "",
@@ -231,4 +231,62 @@ ggplot(ds_28_top_n, aes(x = reorder(Policy_Sales_Channel, n), y = n, fill = n)) 
   coord_flip()
 ```
 
+
+
+```{r}
+vehicle_ages = c("< 1 Year", "1-2 Year", "> 2 Years")
+
+vehicle_prop = dsDummy %>% 
+  filter(Region_Code == "28") %>%
+  group_by(Vehicle_Age) %>% 
+  summarize(n = n(), 
+            interest_count = sum(Response),
+            interest_prop = interest_count/n)
+vehicle_prop_long = vehicle_prop %>% 
+  pivot_longer(cols = c(interest_prop, n), names_to = "Stat", values_to = "num")
+
+ggplot(vehicle_prop_long, aes(x = factor(Vehicle_Age, vehicle_ages), num, fill = Vehicle_Age)) + 
+  geom_col() + 
+  facet_wrap(.~Stat, scales = "free_y", labeller = as_labeller(c(interest_prop = "Interest Rate",
+                                                                 n = "Vehicle Count by Age"))) + 
+  scale_fill_manual(values = c("grey70", "grey30", "grey70"), guide = "none") + 
+  labs(x = "Vehicle Age", y = "", title = "Owners with Vehicles Over 2 Years Old Most Interested in Insurance", subtitle = "Vehicle age as it relates to interest rate and number of vehicles in region 28", caption = "Source: Health Insurance Cross Sell Prediction - Kaggle") +
+  theme_minimal() + 
+  theme(panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank(),
+        plot.title = element_text(size = 16, face = "bold"),
+        plot.subtitle = element_text(size = 13, face = "italic"),
+        plot.caption = element_text(size = 10, hjust = 0, face="italic"))
+```
+
+
+```{r}
+anprem = dsDummy %>% 
+  filter(Region_Code == "28") %>%
+  filter(Annual_Premium < 100000) %>%
+  filter(Annual_Premium > 15000) %>%
+  mutate(Annual_Premium = floor(Annual_Premium / 1000)) %>%
+  group_by(Annual_Premium) %>%
+  summarise(n = n(),
+            int_prop = sum(Response) / n,
+            emph = ifelse(n > 60000, TRUE, FALSE),
+            CI_lower = int_prop - 1.96 * sqrt(int_prop * (1-int_prop)/n),
+            CI_upper = int_prop + 1.96 * sqrt(int_prop * (1-int_prop)/n)) %>% 
+  filter(n > 30)
+
+anprem_long = anprem %>% 
+  pivot_longer(cols = c(int_prop, CI_lower, CI_upper), names_to = "dat", values_to = "prop")
+
+ggplot(anprem, aes(Annual_Premium, int_prop, color = emph)) + 
+  geom_point() + 
+  stat_smooth(method = "loess", se = FALSE, color = "black") + 
+  scale_color_manual(values = c("grey30", "red"), guide = "none") + 
+  labs(x = "Annual Premium ($1000)", y = "Interest Proportion", 
+       title = "Vehicle Insurance Interest Increases Until Annual Premium Hits $50k",
+       subtitle = "Insurance interest rates by annual premium in thousands of USD in region 28",
+       caption = "Source: Health Insurance Cross Sell Prediction - Kaggle") + 
+  theme_classic() + 
+  theme(plot.title = element_text(size = 16, face = "bold"),
+        plot.subtitle = element_text(size = 13, face = "italic"),
+        plot.caption = element_text(size = 10, hjust = 0, face="italic"))
+```
 
